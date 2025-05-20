@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BitLife Futurista</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+  /* Reset y base */
+  * {
+    margin: 0; padding: 0; box-sizing: border-box;
+  }
+  body {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #00fff7;
+    font-family: 'Orbitron', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    user-select: none;
+  }
+  h1 {
+    font-weight: 700;
+    font-size: 3rem;
+    margin-bottom: 20px;
+    text-shadow: 0 0 8px #00fff7aa;
+  }
+  #gameContainer {
+    background: rgba(0, 255, 247, 0.1);
+    border: 2px solid #00fff7aa;
+    border-radius: 15px;
+    width: 100%;
+    max-width: 700px;
+    padding: 25px 30px;
+    box-shadow:
+      0 0 15px #00fff7aa,
+      inset 0 0 20px #00fff7aa;
+  }
+
+  #stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 30px;
+  }
+  .stat-box {
+    background: rgba(0, 255, 247, 0.15);
+    padding: 15px 25px;
+    border-radius: 12px;
+    width: 140px;
+    text-align: center;
+    box-shadow:
+      0 0 8px #00fff7cc,
+      inset 0 0 10px #00fff7cc;
+    transition: transform 0.3s ease;
+    cursor: default;
+    user-select: text;
+  }
+  .stat-box:hover {
+    transform: scale(1.1);
+    box-shadow:
+      0 0 20px #00fff7ff,
+      inset 0 0 20px #00fff7ff;
+  }
+  .stat-label {
+    font-size: 1rem;
+    opacity: 0.7;
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  #actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 35px;
+  }
+  button {
+    background: linear-gradient(45deg, #00fff7, #0099a3);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 30px;
+    color: #002e2e;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    box-shadow:
+      0 0 8px #00fff7bb,
+      0 4px 10px #006f77cc;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.2s ease;
+    text-transform: uppercase;
+  }
+  button:hover:not(:disabled) {
+    background: linear-gradient(45deg, #00fff7, #00fffb);
+    box-shadow:
+      0 0 18px #00fff7ff,
+      0 6px 16px #00fff7ff;
+    transform: scale(1.05);
+  }
+  button:disabled {
+    background: #004d4d88;
+    box-shadow: none;
+    cursor: not-allowed;
+    color: #003535bb;
+  }
+
+  #log {
+    background: rgba(0, 255, 247, 0.1);
+    border-radius: 12px;
+    height: 200px;
+    overflow-y: auto;
+    padding: 15px 20px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1rem;
+    box-shadow:
+      inset 0 0 15px #00fff7aa;
+    user-select: text;
+    line-height: 1.4;
+    text-shadow: 0 0 4px #00fff7aa;
+  }
+
+  /* Animaciones suaves para el log */
+  .log-entry {
+    opacity: 0;
+    animation: fadeInLog 0.8s forwards;
+  }
+  @keyframes fadeInLog {
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Barra de progreso para stats */
+  .progress-bar {
+    position: relative;
+    height: 10px;
+    background: rgba(0,255,247,0.2);
+    border-radius: 10px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    position: absolute;
+    height: 100%;
+    left: 0;
+    top: 0;
+    border-radius: 10px;
+    background: #00fff7;
+    transition: width 0.5s ease;
+  }
+
+  /* Tooltip para stats */
+  .stat-box[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    background: #00fff7cc;
+    color: #002e2e;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    user-select: none;
+    pointer-events: none;
+    box-shadow: 0 0 10px #00fff7aa;
+  }
+</style>
+</head>
+<body>
+
+<h1>BitLife Futurista</h1>
+
+<div id="gameContainer" aria-live="polite">
+  <div id="stats" aria-label="Estadísticas del jugador">
+    <div class="stat-box" id="statName" data-tooltip="Tu nombre">
+      <div class="stat-label">Nombre</div>
+      <div class="stat-value" id="nameDisplay">---</div>
+    </div>
+    <div class="stat-box" id="statAge" data-tooltip="Tu edad actual">
+      <div class="stat-label">Edad</div>
+      <div class="stat-value" id="ageDisplay">0</div>
+    </div>
+    <div class="stat-box" id="statHealth" data-tooltip="Salud física">
+      <div class="stat-label">Salud</div>
+      <div class="stat-value" id="healthDisplay">100</div>
+      <div class="progress-bar" aria-hidden="true">
+        <div class="progress-fill" id="healthBar" style="width: 100%;"></div>
+      </div>
+    </div>
+    <div class="stat-box" id="statHappiness" data-tooltip="Nivel de felicidad">
+      <div class="stat-label">Felicidad</div>
+      <div class="stat-value" id="happinessDisplay">100</div>
+      <div class="progress-bar" aria-hidden="true">
+        <div class="progress-fill" id="happinessBar" style="width: 100%;"></div>
+      </div>
+    </div>
+    <div class="stat-box" id="statMoney" data-tooltip="Dinero disponible en dólares">
+      <div class="stat-label">Dinero</div>
+      <div class="stat-value" id="moneyDisplay">$0</div>
+    </div>
+  </div>
+
+  <div id="actions" role="region" aria-label="Acciones disponibles">
+    <button id="studyBtn" aria-pressed="false" aria-label="Decidir estudiar este año">Estudiar</button>
+    <button id="workBtn" aria-pressed="false" aria-label="Decidir trabajar este año">Trabajar</button>
+    <button id="ageBtn" aria-label="Avanzar un año">Envejecer 1 año</button>
+  </div>
+
+  <h3>Eventos recientes:</h3>
+  <div id="log" aria-live="polite" aria-atomic="false"></div>
+</div>
+
+<script>
+  const state = {
+    name: '',
+    age: 0,
+    health: 100,
+    happiness: 100,
+    money: 0,
+    studying: false,
+    working: false,
+    alive: true,
+    jobLevel: 0,
+    educationLevel: 0,
+  };
+
+  // Elementos DOM
+  const nameDisplay = document.getElementById('nameDisplay');
+  const ageDisplay = document.getElementById('ageDisplay');
+  const healthDisplay = document.getElementById('healthDisplay');
+  const happinessDisplay = document.getElementById('happinessDisplay');
+  const moneyDisplay = document.getElementById('moneyDisplay');
+
+  const healthBar = document.getElementById('healthBar');
+  const happinessBar = document.getElementById('happinessBar');
+
+  const logDiv = document.getElementById('log');
+
+  const studyBtn = document.getElementById('studyBtn');
+  const workBtn = document.getElementById('workBtn');
+  const ageBtn = document.getElementById('ageBtn');
+
+  // Nombre futurista
+  function generateName() {
+    const syllables = ["Zyn", "Cor", "Xel", "Va", "Lun", "Mer", "Qa", "Ty", "Zen", "Or"];
+    const endings = ["ar", "ix", "os", "on", "ek", "ur", "el", "is", "ax", "en"];
+    let name = syllables[Math.floor(Math.random() * syllables.length)] + endings[Math.floor(Math.random() * endings.length)];
+    return name;
+  }
+
+  // Añade un mensaje al log con animación
+  function log(message) {
+    const p = document.createElement('p');
+    p.textContent = message;
+    p.classList.add('log-entry');
+    logDiv.appendChild(p);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  // Actualiza valores y barras visuales
+  function updateDisplay() {
+    nameDisplay.textContent = state.name;
+    ageDisplay.textContent = state.age;
+    healthDisplay.textContent = Math.max(0, Math.min(100, state.health));
+    happinessDisplay.textContent = Math.max(0, Math.min(100, state.happiness));
+    moneyDisplay.textContent = `$${state.money.toLocaleString()}`;
+
+    healthBar.style.width = `${Math.max(0, Math.min(100, state.health))}%`;
+    happinessBar.style.width = `${Math.max(0, Math.min(100, state.happiness))}%`;
+  }
+
+  // Eventos aleatorios con diferentes impactos
+  const randomEvents = [
+    {
+      description: 'Te enfermaste y perdiste salud.',
+      effect: () => { state.health -= 15; state.happiness -= 5; }
+    },
+    {
+      description: 'Tienes un día excelente y sube tu felicidad.',
+      effect: () => { state.happiness += 15; }
+    },
+    {
+      description: 'Recibes un bono inesperado en el trabajo.',
+      effect: () => { state.money += 1000; state.happiness += 5; }
+    },
+    {
+      description: 'Perdiste algo de dinero en una mala inversión.',
+      effect: () => { state.money -= 700; state.happiness -= 10; }
+    },
+    {
+      description: 'Descansaste bien y recuperaste salud.',
+      effect: () => { state.health += 10; }
+    },
+    {
+      description: 'Un día aburrido, sin cambios.',
+      effect: () => {}
+    },
+    {
+      description: 'Te metiste en problemas legales y perdiste dinero.',
+      effect: () => { state.money -= 800; state.happiness -= 20; state.health -= 5; }
+    },
+    {
+      description: 'Tu salud mental mejora tras meditar.',
+      effect: () => { state.happiness += 20; }
+    },
+    {
+      description: 'Una amistad importante mejora tu felicidad.',
+      effect: () => { state.happiness += 12; }
+    },
+    {
+      description: 'Te lesionaste practicando deporte.',
+      effect: () => { state.health -= 20; state.happiness -= 5; }
+    },
+    {
+      description: 'Tu inversión en educación te rinde frutos y consigues un ascenso.',
+      effect: () => {
+        if(state.jobLevel < 5){
+          state.jobLevel++;
+          state.money += 1500 * state.jobLevel;
+          state.happiness += 10;
+          log('¡Has subido de puesto en tu trabajo!');
+        } else {
+          log('Ya eres el jefe máximo, disfrutas de tu éxito.');
+          state.happiness += 15;
+        }
+      }
+    }
+  ];
+
+  // Decide si aplicar un evento (probabilidad variable)
+  function maybeRandomEvent() {
+    if (!state.alive) return;
+    let chance = 0.6; // 60% que ocurra evento cada año
+
+    if (Math.random() < chance) {
+      const eventIndex = Math.floor(Math.random() * randomEvents.length);
+      const event = randomEvents[eventIndex];
+      event.effect();
+      log(event.description);
+
+      // Limita stats
+      state.health = Math.min(100, Math.max(0, state.health));
+      state.happiness = Math.min(100, Math.max(0, state.happiness));
+      state.money = Math.max(0, state.money);
+    }
+  }
+
+  // Verifica si el jugador sigue vivo o pierde
+  function checkAlive() {
+    if (state.health <= 0) {
+      state.alive = false;
+      log('Has muerto por problemas de salud. Fin del juego.');
+      disableButtons();
+    }
+    if (state.age >= 85) {
+      state.alive = false;
+      log('Has fallecido de viejo. Fin del juego.');
+      disableButtons();
+    }
+    if (state.money <= 0 && state.age > 30) {
+      // Simula que si te quedas sin dinero a edad adulta, problemas graves
+      state.health -= 10;
+      state.happiness -= 15;
+      log('La falta de dinero está afectando tu salud y felicidad.');
+      if (state.health <= 0) {
+        state.alive = false;
+        log('Has muerto debido a la pobreza y problemas relacionados. Fin del juego.');
+        disableButtons();
+      }
+    }
+  }
+
+  function disableButtons() {
+    studyBtn.disabled = true;
+    workBtn.disabled = true;
+    ageBtn.disabled = true;
+  }
+
+  // Funciones de botones
+  studyBtn.onclick = () => {
+    if (!state.alive) return;
+    if (state.age < 6) {
+      log('Eres demasiado pequeño para estudiar formalmente.');
+      return;
+    }
+    if (state.working) {
+      state.working = false;
+      workBtn.setAttribute('aria-pressed', 'false');
+    }
+    state.studying = !state.studying;
+    if (state.studying) {
+      log('Decidiste estudiar este año. ¡Buen futuro te espera!');
+      studyBtn.setAttribute('aria-pressed', 'true');
+    } else {
+      log('Dejaste de estudiar este año.');
+      studyBtn.setAttribute('aria-pressed', 'false');
+    }
+  };
+
+  workBtn.onclick = () => {
+    if (!state.alive) return;
+    if (state.age < 16) {
+      log('Eres demasiado joven para trabajar legalmente.');
+      return;
+    }
+    if (state.studying) {
+      state.studying = false;
+      studyBtn.setAttribute('aria-pressed', 'false');
+    }
+    state.working = !state.working;
+    if (state.working) {
+      log('Decidiste trabajar este año para ganar dinero.');
+      workBtn.setAttribute('aria-pressed', 'true');
+    } else {
+      log('Dejaste de trabajar este año.');
+      workBtn.setAttribute('aria-pressed', 'false');
+    }
+  };
+
+  ageBtn.onclick = () => {
+    if (!state.alive) return;
+
+    state.age++;
+
+    // Reglas de efectos según decisiones
+    if (state.studying) {
+      state.educationLevel++;
+      state.happiness += 5;
+      state.health -= 3;
+      state.money -= 200; // gastos en educación
+      log('Has estudiado durante el año. Gastos de educación pero mayor felicidad.');
+    } else if (state.working) {
+      state.money += 1500 + state.jobLevel * 500;
+      state.happiness -= 5;
+      state.health -= 8;
+      log(`Has trabajado y ganado $${(1500 + state.jobLevel * 500).toLocaleString()}.`);
+    } else {
+      // Sin estudio ni trabajo - leve pérdida de felicidad y salud
+      state.happiness -= 7;
+      state.health -= 4;
+      log('Año pasivo. Sin trabajo ni estudio, pierdes algo de salud y felicidad.');
+    }
+
+    maybeRandomEvent();
+
+    // Subida de nivel laboral automática si tienes educación suficiente y estás trabajando
+    if (state.working && state.educationLevel >= 5 && state.jobLevel < 5) {
+      state.jobLevel++;
+      log('Tu educación te ha permitido ascender en el trabajo.');
+      state.happiness += 10;
+      state.money += 1000 * state.jobLevel;
+    }
+
+    // Limita stats
+    state.health = Math.min(100, Math.max(0, state.health));
+    state.happiness = Math.min(100, Math.max(0, state.happiness));
+    state.money = Math.max(0, state.money);
+
+    updateDisplay();
+    log(`Cumples ${state.age} años.`);
+
+    checkAlive();
+  };
+
+  // Inicio el juego
+  function startGame() {
+    state.name = generateName();
+    state.age = 0;
+    state.health = 100;
+    state.happiness = 100;
+    state.money = 500; // empieza con algo de dinero
+    state.studying = false;
